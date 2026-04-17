@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GenCar Designer 版本入口</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --mx: 0;
+        --my: 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: #eef2ff;
+        background: #090716;
+      }
+
+      .hero {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        perspective: 1400px;
+        transform-style: preserve-3d;
+        isolation: isolate;
+      }
+
+      .bg-layer {
+        position: absolute;
+        inset: -4%;
+        pointer-events: none;
+        z-index: 1;
+        background-image:
+          linear-gradient(120deg, rgba(129, 73, 255, 0.38), rgba(81, 245, 212, 0.28) 45%, rgba(162, 121, 255, 0.34)),
+          url("./assets/welcome-bg.png");
+        background-size: cover;
+        background-position: center;
+        filter: saturate(1.08) contrast(1.04) brightness(0.86);
+        transform: translate3d(calc(var(--mx) * -14px), calc(var(--my) * -14px), -40px) scale(1.06);
+        transition: transform 0.24s ease-out;
+      }
+
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        background-image:
+          linear-gradient(rgba(230, 231, 255, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(230, 231, 255, 0.08) 1px, transparent 1px);
+        background-size: 42px 42px;
+        opacity: 0.36;
+        transform: translate3d(calc(var(--mx) * -7px), calc(var(--my) * -7px), 0);
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 3;
+        background:
+          radial-gradient(circle at 20% 18%, rgba(118, 255, 217, 0.22), transparent 36%),
+          radial-gradient(circle at 76% 30%, rgba(164, 130, 255, 0.3), transparent 32%),
+          radial-gradient(circle at 70% 74%, rgba(98, 80, 255, 0.2), transparent 38%),
+          radial-gradient(circle at 50% 50%, transparent 0%, rgba(5, 4, 20, 0.44) 84%);
+      }
+
+      .hud {
+        position: absolute;
+        z-index: 4;
+        border: 1px solid rgba(212, 220, 255, 0.38);
+        background: linear-gradient(160deg, rgba(236, 242, 255, 0.22), rgba(172, 145, 255, 0.14));
+        backdrop-filter: blur(8px);
+        box-shadow: 0 14px 28px rgba(8, 7, 28, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        border-radius: 16px;
+        transform-style: preserve-3d;
+        pointer-events: none;
+      }
+
+      .hud-a {
+        top: 10%;
+        left: 12%;
+        width: 220px;
+        height: 130px;
+        transform: rotate(-12deg) translate3d(calc(var(--mx) * -22px), calc(var(--my) * -16px), 70px);
+      }
+
+      .hud-b {
+        top: 17%;
+        right: 9%;
+        width: 252px;
+        height: 170px;
+        transform: rotate(10deg) translate3d(calc(var(--mx) * 22px), calc(var(--my) * -17px), 84px);
+      }
+
+      .hud-c {
+        bottom: 13%;
+        left: 10%;
+        width: 260px;
+        height: 154px;
+        transform: rotate(-11deg) translate3d(calc(var(--mx) * -20px), calc(var(--my) * 16px), 74px);
+      }
+
+      .hud-d {
+        bottom: 11%;
+        right: 14%;
+        width: 220px;
+        height: 132px;
+        transform: rotate(9deg) translate3d(calc(var(--mx) * 16px), calc(var(--my) * 16px), 68px);
+      }
+
+      .hud::before,
+      .hud::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+      }
+
+      .hud::before {
+        width: 64%;
+        height: 2px;
+        left: 18%;
+        top: 22%;
+        background: linear-gradient(90deg, rgba(98, 241, 225, 0), rgba(98, 241, 225, 0.92), rgba(98, 241, 225, 0));
+      }
+
+      .hud::after {
+        width: 52%;
+        height: 8px;
+        left: 24%;
+        bottom: 18%;
+        background: rgba(239, 244, 255, 0.35);
+        filter: blur(2px);
+      }
+
+      .content {
+        position: absolute;
+        left: 50%;
+        top: 52%;
+        pointer-events: auto;
+        z-index: 2147483000;
+        width: min(760px, calc(100vw - 56px));
+        padding: 28px 30px 24px;
+        border-radius: 22px;
+        border: 1px solid rgba(225, 231, 255, 0.36);
+        background: linear-gradient(155deg, rgba(35, 24, 88, 0.5), rgba(96, 66, 172, 0.26) 45%, rgba(57, 220, 189, 0.14));
+        backdrop-filter: blur(10px);
+        box-shadow: 0 26px 58px rgba(8, 6, 27, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%);
+        transition: none;
+      }
+
+      .title {
+        margin: 0;
+        font-size: clamp(34px, 5vw, 54px);
+        line-height: 1.02;
+        letter-spacing: 0.2px;
+      }
+
+      .subtitle {
+        margin: 12px 0 0;
+        color: rgba(240, 243, 255, 0.88);
+        font-size: clamp(14px, 1.7vw, 18px);
+      }
+
+      .actions {
+        margin-top: 24px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        position: relative;
+        z-index: 2001;
+        pointer-events: auto !important;
+      }
+
+      .btn {
+        position: relative;
+        z-index: 10000;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        border-radius: 14px;
+        padding: 12px 18px;
+        min-width: 170px;
+        border: 1px solid rgba(221, 230, 255, 0.5);
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        transition: none;
+        pointer-events: auto !important;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-clip: padding-box;
+      }
+
+      .btn-light {
+        color: #091428;
+        background: linear-gradient(160deg, rgba(236, 252, 255, 0.96), rgba(199, 243, 247, 0.94));
+      }
+
+      .btn-dark {
+        color: #f4f8ff;
+        background: linear-gradient(160deg, rgba(68, 42, 164, 0.95), rgba(31, 22, 84, 0.96));
+      }
+
+      .hero * {
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .content,
+      .content * {
+        pointer-events: auto !important;
+      }
+      .actions,
+      .actions * {
+        -webkit-user-select: auto;
+        user-select: auto;
+      }
+      .meta {
+        margin-top: 14px;
+        font-size: 13px;
+        color: rgba(223, 229, 255, 0.78);
+      }
+
+      @media (max-width: 880px) {
+        .hud {
+          display: none;
+        }
+        .content {
+          top: 54%;
+          padding: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="hero" id="hero">
+      <div class="bg-layer"></div>
+      <div class="grid-overlay"></div>
+      <div class="vignette"></div>
+
+      <div class="hud hud-a"></div>
+      <div class="hud hud-b"></div>
+      <div class="hud hud-c"></div>
+      <div class="hud hud-d"></div>
+
+      <section class="content">
+        <h1 class="title">GenCar Designer</h1>
+        <div class="actions">
+          <button class="btn btn-light" id="goLight" type="button">浅色模式</button>
+          <button class="btn btn-dark" id="goDark" type="button">深色模式</button>
+        </div>
+      </section>
+    </main>
+    <video id="faceVideo" autoplay muted playsinline aria-hidden="true"></video>
+
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var hero = document.getElementById("hero");
+        var goLight = document.getElementById("goLight");
+        var goDark = document.getElementById("goDark");
+        var faceVideo = document.getElementById("faceVideo");
+        if (!hero) return;
+
+        var mouseState = { x: 0, y: 0, active: false, at: 0 };
+        var faceState = { x: 0, y: 0, active: false, at: 0 };
+        var outputState = { x: 0, y: 0 };
+        var targetState = { x: 0, y: 0 };
+        var rafId = 0;
+        var detectRafId = 0;
+        var detectInFlight = false;
+        var stream = null;
+        var detector = null;
+
+        function clamp(value, min, max) {
+          return Math.max(min, Math.min(max, value));
+        }
+
+        function setParallaxVars(x, y) {
+          root.style.setProperty("--mx", x.toFixed(4));
+          root.style.setProperty("--my", y.toFixed(4));
+        }
+
+        function selectTargetState() {
+          if (faceState.active && mouseState.active) {
+            if (faceState.at >= mouseState.at) {
+              targetState.x = faceState.x;
+              targetState.y = faceState.y;
+            } else {
+              targetState.x = mouseState.x;
+              targetState.y = mouseState.y;
+            }
+            return;
+          }
+          if (faceState.active) {
+            targetState.x = faceState.x;
+            targetState.y = faceState.y;
+            return;
+          }
+          if (mouseState.active) {
+            targetState.x = mouseState.x;
+            targetState.y = mouseState.y;
+            return;
+          }
+          targetState.x = 0;
+          targetState.y = 0;
+        }
+
+        function animateParallax() {
+          selectTargetState();
+          outputState.x += (targetState.x - outputState.x) * 0.15;
+          outputState.y += (targetState.y - outputState.y) * 0.15;
+          setParallaxVars(outputState.x, outputState.y);
+          rafId = window.requestAnimationFrame(animateParallax);
+        }
+
+        function updateMouse(clientX, clientY) {
+          mouseState.x = (clientX / window.innerWidth) * 2 - 1;
+          mouseState.y = (clientY / window.innerHeight) * 2 - 1;
+          mouseState.active = true;
+          mouseState.at = Date.now();
+        }
+
+        hero.addEventListener("mousemove", function (event) {
+          updateMouse(event.clientX, event.clientY);
+        });
+        hero.addEventListener("mouseleave", function () {
+          mouseState.active = false;
+          mouseState.x = 0;
+          mouseState.y = 0;
+          mouseState.at = Date.now();
+        });
+
+        if (goLight) {
+          goLight.addEventListener("click", function () {
+            window.location.href = "http://localhost:4173/index.html";
+          });
+        }
+        if (goDark) {
+          goDark.addEventListener("click", function () {
+            window.location.href = "https://zikeguo-afk.github.io/car-gene/";
+          });
+        }
+
+        async function detectFace() {
+          if (!detector || !faceVideo || faceVideo.readyState < 2 || detectInFlight || document.hidden) {
+            detectRafId = window.requestAnimationFrame(detectFace);
+            return;
+          }
+          detectInFlight = true;
+          try {
+            var faces = await detector.detect(faceVideo);
+            if (faces && faces.length > 0) {
+              var box = faces[0].boundingBox;
+              var centerX = box.x + box.width / 2;
+              var centerY = box.y + box.height / 2;
+              var normalizedX = (centerX / faceVideo.videoWidth) * 2 - 1;
+              var normalizedY = (centerY / faceVideo.videoHeight) * 2 - 1;
+              faceState.x = clamp(normalizedX, -1, 1);
+              faceState.y = clamp(normalizedY, -1, 1);
+              faceState.active = true;
+              faceState.at = Date.now();
+            } else if (Date.now() - faceState.at > 600) {
+              faceState.active = false;
+            }
+          } catch (error) {
+            faceState.active = false;
+          } finally {
+            detectInFlight = false;
+            detectRafId = window.requestAnimationFrame(detectFace);
+          }
+        }
+
+        async function startFaceTracking() {
+          if (!("FaceDetector" in window)) {
+            return;
+          }
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !faceVideo) {
+            return;
+          }
+          try {
+            detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            faceVideo.srcObject = stream;
+            await faceVideo.play();
+            detectRafId = window.requestAnimationFrame(detectFace);
+          } catch (error) {
+            faceState.active = false;
+          }
+        }
+
+        function stopFaceTracking() {
+          if (detectRafId) {
+            window.cancelAnimationFrame(detectRafId);
+            detectRafId = 0;
+          }
+          if (stream) {
+            stream.getTracks().forEach(function (track) {
+              track.stop();
+            });
+            stream = null;
+          }
+          faceState.active = false;
+          detector = null;
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) {
+            faceState.active = false;
+            if (detectRafId) {
+              window.cancelAnimationFrame(detectRafId);
+              detectRafId = 0;
+            }
+            return;
+          }
+          if (!detectRafId && stream && detector) {
+            detectRafId = window.requestAnimationFrame(detectFace);
+          }
+        });
+
+        window.addEventListener("beforeunload", function () {
+          if (rafId) {
+            window.cancelAnimationFrame(rafId);
+          }
+          stopFaceTracking();
+        });
+
+        setParallaxVars(0, 0);
+        rafId = window.requestAnimationFrame(animateParallax);
+        startFaceTracking();
+      })();
+    </script>
+    <style>
+      #faceVideo {
+        position: fixed;
+        width: 1px;
+        height: 1px;
+        left: -100vw;
+        top: -100vh;
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </body>
+</html>
